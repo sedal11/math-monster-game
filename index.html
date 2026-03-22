@@ -1,0 +1,1962 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>수학 몬스터 도감 🧮</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+* { font-family: 'Noto Sans KR', sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
+body { margin: 0; background: #0f172a; overflow: hidden; }
+#root { width: 100vw; height: 100dvh; }
+#loading { display:flex; align-items:center; justify-content:center; height:100dvh; background:#0f172a; color:white; font-size:2rem; }
+
+@keyframes bounce { 0%{transform:translateY(-300px) scale(0.8);opacity:0} 60%{transform:translateY(0) scale(1.1)} 80%{transform:translateY(-40px) scale(0.95)} 100%{transform:translateY(0) scale(1);opacity:1} }
+@keyframes shake { 0%,100%{transform:rotate(0)} 20%{transform:rotate(-15deg)} 40%{transform:rotate(15deg)} 60%{transform:rotate(-10deg)} 80%{transform:rotate(10deg)} }
+@keyframes hatch { 0%{transform:scale(1)} 50%{transform:scale(1.3)} 100%{transform:scale(1) rotate(360deg)} }
+@keyframes glow { 0%{filter:brightness(1)} 50%{filter:brightness(2) drop-shadow(0 0 20px gold)} 100%{filter:brightness(1)} }
+@keyframes escape { 0%{transform:translateX(0);opacity:1} 100%{transform:translateX(300px) scale(0.3);opacity:0} }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+@keyframes sparkle { 0%{opacity:0;transform:scale(0) rotate(0)} 50%{opacity:1;transform:scale(1.2) rotate(180deg)} 100%{opacity:0;transform:scale(0) rotate(360deg)} }
+@keyframes slideUp { 0%{transform:translateY(100%);opacity:0} 100%{transform:translateY(0);opacity:1} }
+@keyframes fadeIn { 0%{opacity:0} 100%{opacity:1} }
+@keyframes confetti { 0%{transform:translateY(0) rotate(0);opacity:1} 100%{transform:translateY(-200px) rotate(720deg);opacity:0} }
+@keyframes pop { 0%{transform:scale(0)} 60%{transform:scale(1.2)} 100%{transform:scale(1)} }
+@keyframes countDown { 0%{transform:scale(1);opacity:1} 50%{transform:scale(0.5);opacity:0.5} 100%{transform:scale(0);opacity:0} }
+@keyframes bossHit { 0%{transform:scale(1)} 50%{transform:scale(0.9);filter:brightness(2)} 100%{transform:scale(1)} }
+@keyframes bossIdle { 0%,100%{transform:translateY(0) rotate(-2deg)} 50%{transform:translateY(-10px) rotate(2deg)} }
+@keyframes timerPulse { 0%,100%{transform:scale(1);color:#ef4444} 50%{transform:scale(1.2);color:#fbbf24} }
+
+.animate-bounce-in { animation: bounce 0.8s ease-out forwards; }
+.animate-shake { animation: shake 0.5s ease-in-out; }
+.animate-hatch { animation: hatch 1s ease-in-out; }
+.animate-glow { animation: glow 1.5s ease-in-out; }
+.animate-escape { animation: escape 0.8s ease-in forwards; }
+.animate-float { animation: float 3s ease-in-out infinite; }
+.animate-pulse { animation: pulse 2s ease-in-out infinite; }
+.animate-sparkle { animation: sparkle 0.8s ease-out forwards; }
+.animate-slide-up { animation: slideUp 0.5s ease-out forwards; }
+.animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+.animate-confetti { animation: confetti 1s ease-out forwards; }
+.animate-pop { animation: pop 0.4s ease-out forwards; }
+.animate-boss-hit { animation: bossHit 0.3s ease-out; }
+.animate-boss-idle { animation: bossIdle 2s ease-in-out infinite; }
+.animate-timer-pulse { animation: timerPulse 0.5s ease-in-out infinite; }
+
+.btn-game { transition: all 0.15s; cursor: pointer; }
+.btn-game:active { transform: scale(0.95); }
+.monster-card { transition: all 0.3s; }
+.monster-card:hover { transform: translateY(-4px); }
+.progress-bar { transition: width 0.5s ease-out; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"><div id="loading">🧮 로딩중...</div></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
+
+// ============================================================
+// LEVEL CONFIG (Original 8 + New 4 multiplication/division levels)
+// ============================================================
+const LEVEL_INFO = [
+  {level:1, name:"더하기 기초", icon:"🌱", desc:"합이 9까지 더하기", color:"from-green-400 to-green-600", op:"+", minA:0, maxA:9, minB:0, maxB:9, maxSum:9, unlockReq:0},
+  {level:2, name:"빼기 첫걸음", icon:"🐣", desc:"9 이하 빼기 배우기", color:"from-blue-400 to-blue-600", op:"-", minA:1, maxA:9, minB:0, maxB:9, maxSum:9, unlockReq:8},
+  {level:3, name:"더하기 성장", icon:"🐥", desc:"합이 20까지 더하기", color:"from-yellow-400 to-yellow-600", op:"+", minA:1, maxA:19, minB:1, maxB:19, maxSum:20, unlockReq:8},
+  {level:4, name:"빼기 연습", icon:"🐤", desc:"20 이하 빼기", color:"from-orange-400 to-orange-600", op:"-", minA:1, maxA:20, minB:0, maxB:20, maxSum:20, unlockReq:8},
+  {level:5, name:"섞어서 풀기", icon:"🐓", desc:"더하기+빼기 (20 이하)", color:"from-red-400 to-red-600", op:"mixed", minA:1, maxA:19, minB:1, maxB:19, maxSum:20, unlockReq:8},
+  {level:6, name:"큰 수 더하기", icon:"🦅", desc:"100까지 더하기", color:"from-purple-400 to-purple-600", op:"+", minA:10, maxA:99, minB:1, maxB:99, maxSum:100, unlockReq:8},
+  {level:7, name:"큰 수 빼기", icon:"🐉", desc:"100까지 빼기", color:"from-pink-400 to-pink-600", op:"-", minA:10, maxA:100, minB:1, maxB:100, maxSum:100, unlockReq:8},
+  {level:8, name:"종합 도전", icon:"🏆", desc:"100까지 더하기+빼기", color:"from-amber-400 to-amber-600", op:"mixed", minA:10, maxA:99, minB:1, maxB:99, maxSum:100, unlockReq:8},
+  {level:9, name:"구구단 기초", icon:"✖️", desc:"2~5단 곱셈", color:"from-indigo-400 to-indigo-600", op:"×", minA:2, maxA:5, minB:1, maxB:9, maxSum:45, unlockReq:8},
+  {level:10, name:"구구단 완성", icon:"💫", desc:"6~9단 곱셈", color:"from-violet-400 to-violet-600", op:"×", minA:6, maxA:9, minB:1, maxB:9, maxSum:81, unlockReq:8},
+  {level:11, name:"나눗셈 기초", icon:"➗", desc:"나머지 없는 나눗셈", color:"from-rose-400 to-rose-600", op:"÷", minA:2, maxA:9, minB:1, maxB:9, maxSum:81, unlockReq:8},
+  {level:12, name:"종합 도전", icon:"👑", desc:"사칙연산 혼합", color:"from-fuchsia-400 to-fuchsia-600", op:"allMixed", minA:1, maxA:99, minB:1, maxB:99, maxSum:100, unlockReq:8},
+];
+
+// Monster emoji pools
+const MONSTER_EMOJIS = {
+  egg: ["🥚","🪺","💫","🫧"],
+  baby: ["🐣","🐥","👾","🐛","🦠","🐙","🦑","🐝","🐞","🦋","🐌","🦎","🐸","🐹","🐨","🐼","🦊","🐷","🐮","🐯"],
+  evolved: ["🐉","🦖","🐲","👹","🤖","🦄","🌟","🔥","💎","👑","🦅","🦈","🐅","🦍","🦏","🐋","🦂","🐍","🦇","🦬"],
+};
+
+const BOSS_EMOJIS = ["🐲","👹","🦖","👾","🤖"];
+
+// Visual helper emojis for counting
+const COUNT_EMOJIS = ["⭐","🍎","🐟","🌸","💎","🎈","🍬","🐣","🔮","🌈"];
+
+// Story mode data
+const STORY_TEXTS = {
+  intro: "몬스터 왕국이 어둠의 마법에 빠졌어요! 수학의 힘으로 몬스터 왕국을 구해야 해요!",
+  1: "첫 번째 마을에 도착했어요. 더하기의 힘을 배워볼까요?",
+  2: "두 번째 마을이에요. 빼기의 마법을 익혀봐요!",
+  3: "숲 속으로 들어왔어요. 더 큰 수의 더하기에 도전!",
+  4: "어두운 동굴이에요. 빼기 실력을 더 키워봐요!",
+  5: "갈림길이에요. 더하기와 빼기를 섞어서 풀어봐요!",
+  6: "높은 산에 올랐어요. 큰 수의 더하기에 도전!",
+  7: "깊은 계곡이에요. 큰 수의 빼기를 마스터하세요!",
+  8: "마왕의 성 앞이에요! 모든 힘을 모아 도전!",
+  9: "새로운 대륙! 곱셈의 마법을 배워볼까요?",
+  10: "마법 학교에 입학했어요! 구구단을 완성하세요!",
+  11: "나눗셈의 탑에 도착했어요. 나누기의 비밀을 풀어봐요!",
+  12: "최종 결전! 사칙연산 모든 힘을 합쳐 싸워요!",
+};
+
+const BOSS_DIALOGUES = [
+  "크하하! 이 문제를 풀 수 있겠느냐?",
+  "어림없다! 나를 이길 수 없을 것이다!",
+  "으으... 수학의 힘이 이렇게 강하다니!",
+  "아직 끝나지 않았다! 더 어려운 문제를 내겠다!",
+  "불가능하다! 이걸 맞추다니!",
+];
+
+const TITLE_THRESHOLDS = [
+  {minStars:0, title:"수학 모험가", icon:"🎒"},
+  {minStars:6, title:"수학 전사", icon:"⚔️"},
+  {minStars:15, title:"수학 영웅", icon:"🛡️"},
+  {minStars:24, title:"수학 마법사", icon:"🧙"},
+  {minStars:33, title:"수학 전설", icon:"👑"},
+];
+
+// ============================================================
+// DAILY MISSION SYSTEM
+// ============================================================
+function getTodayString() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function generateDailyMissions(dateStr) {
+  // Seed-based on date for consistent missions per day
+  let seed = 0;
+  for (let i = 0; i < dateStr.length; i++) seed = ((seed << 5) - seed + dateStr.charCodeAt(i)) | 0;
+  seed = Math.abs(seed);
+
+  const missionPool = [
+    {type:"streak", target:3, desc:"3문제 연속 정답", icon:"🔥", bonus:30},
+    {type:"streak", target:5, desc:"5문제 연속 정답", icon:"🔥", bonus:50},
+    {type:"correctCount", target:10, desc:"10문제 정답 맞추기", icon:"✅", bonus:40},
+    {type:"correctCount", target:20, desc:"20문제 정답 맞추기", icon:"✅", bonus:80},
+    {type:"levelStar", targetLevel: (seed % 8) + 1, targetStars:2, desc:`레벨${(seed%8)+1} 별2개 이상 달성`, icon:"⭐", bonus:50},
+    {type:"levelStar", targetLevel: (seed % 12) + 1, targetStars:3, desc:`레벨${(seed%12)+1} 별3개 달성`, icon:"⭐", bonus:70},
+    {type:"monsterCollect", target:2, desc:"몬스터 2마리 새로 수집", icon:"🐾", bonus:40},
+    {type:"monsterCollect", target:3, desc:"몬스터 3마리 새로 수집", icon:"🐾", bonus:60},
+    {type:"quizComplete", target:2, desc:"퀴즈 2회 완료", icon:"📝", bonus:30},
+    {type:"quizComplete", target:3, desc:"퀴즈 3회 완료", icon:"📝", bonus:45},
+    {type:"bossDefeat", target:1, desc:"보스 몬스터 1마리 처치", icon:"👹", bonus:60},
+    {type:"timeAttack", target:1, desc:"시간 도전 모드 1회 완료", icon:"⏱️", bonus:40},
+  ];
+
+  const picked = [];
+  const indices = new Set();
+  for (let i = 0; i < 3; i++) {
+    let idx = (seed * (i + 7) + i * 31) % missionPool.length;
+    while (indices.has(idx)) idx = (idx + 1) % missionPool.length;
+    indices.add(idx);
+    picked.push({...missionPool[idx], id: `mission_${dateStr}_${i}`});
+  }
+  return picked;
+}
+
+function checkMissionProgress(mission, save, dailyProgress) {
+  const dp = dailyProgress || {};
+  switch(mission.type) {
+    case "streak": return Math.min(dp.bestStreakToday || 0, mission.target);
+    case "correctCount": return Math.min(dp.correctToday || 0, mission.target);
+    case "levelStar": {
+      const s = save.stats[mission.targetLevel];
+      if (!s || s.total === 0) return 0;
+      const pct = Math.round((s.correct / s.total) * 100);
+      const stars = pct >= 90 ? 3 : pct >= 70 ? 2 : pct >= 50 ? 1 : 0;
+      return Math.min(stars, mission.targetStars);
+    }
+    case "monsterCollect": return Math.min(dp.newMonstersToday || 0, mission.target);
+    case "quizComplete": return Math.min(dp.quizCompleteToday || 0, mission.target);
+    case "bossDefeat": return Math.min(dp.bossDefeatedToday || 0, mission.target);
+    case "timeAttack": return Math.min(dp.timeAttackToday || 0, mission.target);
+    default: return 0;
+  }
+}
+
+function isMissionComplete(mission, save, dailyProgress) {
+  const progress = checkMissionProgress(mission, save, dailyProgress);
+  return progress >= mission.target;
+}
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function hash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function getMonsterStage(correctCount) {
+  if (correctCount <= 0) return null;
+  if (correctCount < 3) return "egg";
+  if (correctCount < 5) return "baby";
+  return "evolved";
+}
+
+function getMonsterEmoji(seed, stage) {
+  if (!stage) return "❓";
+  const h = typeof seed === "string" ? hash(seed) : seed;
+  const pool = MONSTER_EMOJIS[stage];
+  return pool[h % pool.length];
+}
+
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getTotalStars(save) {
+  let total = 0;
+  for (let lv = 1; lv <= 12; lv++) {
+    const s = save.stats[lv];
+    if (s && s.total > 0) {
+      const pct = Math.round((s.correct / s.total) * 100);
+      total += pct >= 90 ? 3 : pct >= 70 ? 2 : pct >= 50 ? 1 : 0;
+    }
+  }
+  return total;
+}
+
+function getPlayerTitle(save) {
+  const stars = getTotalStars(save);
+  let title = TITLE_THRESHOLDS[0];
+  for (const t of TITLE_THRESHOLDS) {
+    if (stars >= t.minStars) title = t;
+  }
+  return title;
+}
+
+function getLevelStars(save, level) {
+  const s = save.stats[level];
+  if (!s || s.total === 0) return 0;
+  const pct = Math.round((s.correct / s.total) * 100);
+  return pct >= 90 ? 3 : pct >= 70 ? 2 : pct >= 50 ? 1 : 0;
+}
+
+// Generate a math problem for a given level
+function generateProblem(levelInfo) {
+  let op = levelInfo.op;
+  if (op === "mixed") op = Math.random() < 0.5 ? "+" : "-";
+  if (op === "allMixed") {
+    const r = Math.random();
+    if (r < 0.25) op = "+";
+    else if (r < 0.5) op = "-";
+    else if (r < 0.75) op = "×";
+    else op = "÷";
+  }
+
+  let a, b, answer;
+  if (op === "+") {
+    const maxS = levelInfo.maxSum;
+    a = rand(levelInfo.minA, Math.min(levelInfo.maxA, maxS));
+    const maxB2 = Math.min(levelInfo.maxB, maxS - a);
+    b = rand(Math.min(levelInfo.minB, maxB2), Math.max(0, maxB2));
+    answer = a + b;
+  } else if (op === "-") {
+    a = rand(Math.max(levelInfo.minA, 1), Math.min(levelInfo.maxA, levelInfo.maxSum));
+    b = rand(levelInfo.minB, Math.min(levelInfo.maxB, a));
+    answer = a - b;
+  } else if (op === "×") {
+    a = rand(levelInfo.minA, levelInfo.maxA);
+    b = rand(levelInfo.minB, levelInfo.maxB);
+    answer = a * b;
+  } else if (op === "÷") {
+    // Division with no remainder
+    b = rand(2, 9);
+    const quotient = rand(1, 9);
+    a = b * quotient;
+    answer = quotient;
+  }
+
+  // Generate wrong choices
+  const wrongs = new Set();
+  let attempts = 0;
+  while (wrongs.size < 3 && attempts < 50) {
+    let w;
+    const offset = rand(1, Math.max(3, Math.ceil(Math.abs(answer) * 0.5) + 1));
+    w = Math.random() < 0.5 ? answer + offset : answer - offset;
+    if (w < 0) w = answer + offset;
+    if (w !== answer && w >= 0) wrongs.add(w);
+    attempts++;
+  }
+  // Fallback
+  while (wrongs.size < 3) {
+    wrongs.add(answer + wrongs.size + 1);
+  }
+
+  const choices = shuffle([answer, ...wrongs]);
+  const id = `${a}${op}${b}`;
+  const countEmoji = COUNT_EMOJIS[hash(id) % COUNT_EMOJIS.length];
+
+  return { a, b, op, answer, choices, id, countEmoji };
+}
+
+// Generate 10 problems for a quiz
+function generateQuiz(level) {
+  const info = LEVEL_INFO[level - 1];
+  const problems = [];
+  const seen = new Set();
+  let attempts = 0;
+  while (problems.length < 10 && attempts < 100) {
+    const p = generateProblem(info);
+    const key = `${p.a}${p.op}${p.b}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      problems.push(p);
+    }
+    attempts++;
+  }
+  return problems;
+}
+
+// Generate boss problems - same level but faster
+function generateBossProblems(level) {
+  const info = LEVEL_INFO[level - 1];
+  const problems = [];
+  const seen = new Set();
+  let attempts = 0;
+  while (problems.length < 20 && attempts < 200) {
+    const p = generateProblem(info);
+    const key = `${p.a}${p.op}${p.b}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      problems.push(p);
+    }
+    attempts++;
+  }
+  return problems;
+}
+
+// ============================================================
+// SOUND EFFECTS
+// ============================================================
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playTone(freq, duration, type="sine") {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch(e) {}
+}
+function sfxCorrect() { playTone(523,0.1); setTimeout(()=>playTone(659,0.1),100); setTimeout(()=>playTone(784,0.2),200); }
+function sfxWrong() { playTone(200,0.3,"sawtooth"); }
+function sfxHatch() { for(let i=0;i<5;i++) setTimeout(()=>playTone(400+i*100,0.15),i*80); }
+function sfxEvolve() { for(let i=0;i<8;i++) setTimeout(()=>playTone(300+i*80,0.2,"triangle"),i*60); }
+function sfxClick() { playTone(800,0.05); }
+function sfxCombo(n) { for(let i=0;i<Math.min(n,5);i++) setTimeout(()=>playTone(523+i*50,0.1),i*80); }
+function sfxBossHit() { playTone(150,0.2,"sawtooth"); setTimeout(()=>playTone(200,0.15,"square"),100); }
+function sfxBossDefeat() { for(let i=0;i<10;i++) setTimeout(()=>playTone(200+i*60,0.25,"triangle"),i*80); }
+function sfxTimeWarning() { playTone(440,0.1,"square"); }
+function sfxMissionComplete() { playTone(523,0.1); setTimeout(()=>playTone(659,0.1),100); setTimeout(()=>playTone(784,0.1),200); setTimeout(()=>playTone(1047,0.3),300); }
+
+// ============================================================
+// TEACHER VOICE (Web Speech API)
+// ============================================================
+let teacherVoiceEnabled = true;
+let currentUtterance = null;
+
+function stopSpeaking() {
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+    currentUtterance = null;
+  }
+}
+
+function speak(text, rate = 0.85) {
+  try {
+    if (!teacherVoiceEnabled || !window.speechSynthesis) return;
+    stopSpeaking();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ko-KR";
+    u.rate = rate;
+    u.pitch = 1.1;
+    u.volume = 1.0;
+    const voices = window.speechSynthesis.getVoices();
+    const koVoice = voices.find(v => v.lang.startsWith("ko"));
+    if (koVoice) u.voice = koVoice;
+    currentUtterance = u;
+    window.speechSynthesis.speak(u);
+  } catch(e) {}
+}
+
+function opName(op) {
+  if (op === "+") return "더하기";
+  if (op === "-") return "빼기";
+  if (op === "×") return "곱하기";
+  if (op === "÷") return "나누기";
+  return op;
+}
+
+function speakProblem(a, b, op) {
+  speak(`${a} ${opName(op)} ${b}는 얼마일까요?`);
+}
+
+function speakCorrect(a, b, op, answer, streak) {
+  const phrases = [
+    `딩동댕! 정답이에요! ${a} ${opName(op)} ${b}는 ${answer}!`,
+    `잘했어요! ${answer}이 맞아요!`,
+    `대단해요! 정답 ${answer}!`,
+    `멋져요! ${a} ${opName(op)} ${b}는 ${answer}이죠!`,
+    `완벽해요! 정답은 ${answer}!`,
+  ];
+  let msg = phrases[Math.floor(Math.random() * phrases.length)];
+  if (streak >= 3) msg += ` ${streak}연속 정답! 대단해요!`;
+  speak(msg);
+}
+
+function speakWrong(a, b, op, answer) {
+  const phrases = [
+    `아쉬워요! 정답은 ${answer}이에요. ${a} ${opName(op)} ${b}는 ${answer}이에요.`,
+    `괜찮아요! ${a} ${opName(op)} ${b}는 ${answer}이에요. 다음엔 맞출 수 있어요!`,
+    `틀렸지만 괜찮아요! 정답은 ${answer}! 다시 도전해봐요!`,
+  ];
+  speak(phrases[Math.floor(Math.random() * phrases.length)]);
+}
+
+function speakHatch() { speak("우와! 몬스터 알에서 아기 몬스터가 태어났어요!"); }
+function speakEvolve() { speak("대박! 몬스터가 진화했어요! 정말 대단해요!"); }
+function speakQuizStart(level) { speak(`레벨 ${level} 시작! 화이팅!`, 0.9); }
+function speakQuizComplete(percent) {
+  if (percent >= 90) speak("와! 거의 완벽해요! 수학 천재!");
+  else if (percent >= 70) speak("잘했어요! 조금만 더 연습하면 완벽해질 거예요!");
+  else if (percent >= 50) speak("좋아요! 계속 연습하면 더 잘할 수 있어요!");
+  else speak("괜찮아요! 다시 도전해봐요! 할 수 있어요!");
+}
+
+// Preload voices
+if (window.speechSynthesis) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+}
+
+// ============================================================
+// LOCALSTORAGE (version 2 with migration)
+// ============================================================
+const SAVE_KEY = "math_monster_save";
+
+function migrateSave(d) {
+  // Migrate from version 1 to version 2
+  if (d && d.version === 1) {
+    return {
+      ...d,
+      version: 2,
+      wrongAnswers: [],
+      bossDefeated: {},
+      timeAttackBest: {},
+      dailyProgress: {},
+      parentStats: { dailyRecords: {}, totalStudyTime: 0 },
+      missionsCompleted: {},
+    };
+  }
+  return d;
+}
+
+function loadSave() {
+  try {
+    let d = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (d && d.version === 1) {
+      d = migrateSave(d);
+      writeSave(d);
+      return d;
+    }
+    if (d && d.version === 2) return d;
+  } catch(e) {}
+  return {
+    version: 2,
+    stats: {},
+    totalScore: 0,
+    totalCorrect: 0,
+    totalWrong: 0,
+    streak: 0,
+    bestStreak: 0,
+    monstersCaught: {},
+    wrongAnswers: [],
+    bossDefeated: {},
+    timeAttackBest: {},
+    dailyProgress: {},
+    parentStats: { dailyRecords: {}, totalStudyTime: 0 },
+    missionsCompleted: {},
+  };
+}
+
+function writeSave(data) {
+  localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+}
+
+function getDailyProgress(save) {
+  const today = getTodayString();
+  return save.dailyProgress[today] || {
+    correctToday: 0,
+    wrongToday: 0,
+    bestStreakToday: 0,
+    newMonstersToday: 0,
+    quizCompleteToday: 0,
+    bossDefeatedToday: 0,
+    timeAttackToday: 0,
+    studyStartTime: null,
+  };
+}
+
+function updateDailyProgress(save, updates) {
+  const today = getTodayString();
+  const current = getDailyProgress(save);
+  save.dailyProgress[today] = { ...current, ...updates };
+  return save;
+}
+
+// ============================================================
+// COMPONENTS
+// ============================================================
+
+function Confetti({show}) {
+  if (!show) return null;
+  const items = ["🌟","⭐","✨","💫","🎉","🎊","💥","🔥","💎","👑"];
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-50">
+      {Array.from({length:15}).map((_,i) => (
+        <div key={i} className="absolute animate-confetti text-2xl"
+          style={{left:`${5+Math.random()*90}%`, top:`${50+Math.random()*40}%`, animationDelay:`${Math.random()*0.5}s`, animationDuration:`${0.8+Math.random()*0.5}s`}}>
+          {items[i%items.length]}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Visual counting helper
+function VisualHelper({a, b, op, countEmoji, show}) {
+  if (!show) return null;
+  if (op === "+" && a + b <= 10) {
+    return (
+      <div className="bg-white/5 rounded-2xl p-3 mb-4">
+        <div className="flex flex-wrap gap-1 justify-center mb-1">
+          {Array.from({length:a}).map((_,i) => <span key={`a${i}`} className="text-2xl animate-pop" style={{animationDelay:`${i*0.05}s`}}>{countEmoji}</span>)}
+          <span className="text-2xl mx-1 text-yellow-300 font-bold">+</span>
+          {Array.from({length:b}).map((_,i) => <span key={`b${i}`} className="text-2xl animate-pop" style={{animationDelay:`${(a+i)*0.05}s`}}>{countEmoji}</span>)}
+        </div>
+      </div>
+    );
+  }
+  if (op === "-" && a <= 10) {
+    return (
+      <div className="bg-white/5 rounded-2xl p-3 mb-4">
+        <div className="flex flex-wrap gap-1 justify-center">
+          {Array.from({length:a}).map((_,i) => (
+            <span key={i} className={`text-2xl ${i >= a - b ? 'opacity-30 line-through' : ''}`}
+              style={{animationDelay:`${i*0.05}s`}}>
+              {countEmoji}
+            </span>
+          ))}
+        </div>
+        <div className="text-xs text-gray-400 text-center mt-1">{a}개에서 {b}개를 빼면?</div>
+      </div>
+    );
+  }
+  if (op === "×" && a <= 5 && b <= 5) {
+    return (
+      <div className="bg-white/5 rounded-2xl p-3 mb-4">
+        <div className="text-xs text-gray-400 text-center mb-1">{countEmoji}가 {a}개씩 {b}묶음</div>
+        <div className="flex flex-col items-center gap-1">
+          {Array.from({length:b}).map((_,row) => (
+            <div key={row} className="flex gap-1">
+              {Array.from({length:a}).map((_,col) => (
+                <span key={col} className="text-lg animate-pop" style={{animationDelay:`${(row*a+col)*0.03}s`}}>{countEmoji}</span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
+function VoiceToggle() {
+  const [enabled, setEnabled] = useState(teacherVoiceEnabled);
+  return (
+    <button onClick={() => { teacherVoiceEnabled = !teacherVoiceEnabled; setEnabled(!enabled); if (!teacherVoiceEnabled) stopSpeaking(); sfxClick(); }}
+      className={`btn-game fixed top-4 right-4 z-50 w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-lg transition-all ${enabled ? 'bg-gradient-to-r from-green-400 to-cyan-500' : 'bg-gray-600'}`}>
+      {enabled ? "🔊" : "🔇"}
+    </button>
+  );
+}
+
+// -- Daily Mission Display --
+function DailyMissionPanel({save, dailyProgress}) {
+  const today = getTodayString();
+  const missions = generateDailyMissions(today);
+  const completedMissions = save.missionsCompleted[today] || [];
+
+  return (
+    <div className="bg-white/5 rounded-2xl p-4 w-full max-w-xs">
+      <div className="text-sm font-bold text-yellow-300 mb-2">📋 오늘의 미션</div>
+      {missions.map((m, i) => {
+        const done = completedMissions.includes(m.id) || isMissionComplete(m, save, dailyProgress);
+        const progress = checkMissionProgress(m, save, dailyProgress);
+        return (
+          <div key={i} className={`flex items-center gap-2 text-xs mb-1.5 ${done ? 'opacity-60' : ''}`}>
+            <span className="text-lg">{done ? "✅" : m.icon}</span>
+            <span className="flex-1">{m.desc}</span>
+            <span className={`font-bold ${done ? 'text-green-400' : 'text-gray-400'}`}>
+              {done ? `+${m.bonus}점` : `${progress}/${m.target}`}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// -- Start Screen --
+function StartScreen({onPlay, onDex, onWrongReview, onTimeAttack, onParentDash, totalCaught, totalScore, bestStreak, save}) {
+  const title = getPlayerTitle(save);
+  const dailyProgress = getDailyProgress(save);
+  const wrongCount = (save.wrongAnswers || []).length;
+
+  return (
+    <div className="h-full flex flex-col items-center justify-center p-4 bg-gradient-to-b from-emerald-900 via-teal-900 to-slate-900 text-white overflow-y-auto">
+      <div className="text-6xl mb-2 animate-float">🧮</div>
+      <h1 className="text-3xl font-black mb-1 bg-gradient-to-r from-green-300 to-cyan-400 bg-clip-text text-transparent">
+        수학 몬스터 도감
+      </h1>
+      <div className="text-sm text-gray-400 mb-1">{title.icon} {title.title}</div>
+      <p className="text-gray-300 text-sm mb-4">수학 문제를 풀고 몬스터를 모아보세요!</p>
+
+      <div className="flex gap-3 mb-4 text-center">
+        <div className="bg-white/10 rounded-2xl px-4 py-3">
+          <div className="text-2xl font-bold text-yellow-300">{totalCaught}</div>
+          <div className="text-xs text-gray-400">몬스터</div>
+        </div>
+        <div className="bg-white/10 rounded-2xl px-4 py-3">
+          <div className="text-2xl font-bold text-green-300">{totalScore}</div>
+          <div className="text-xs text-gray-400">점수</div>
+        </div>
+        <div className="bg-white/10 rounded-2xl px-4 py-3">
+          <div className="text-2xl font-bold text-orange-300">{bestStreak}🔥</div>
+          <div className="text-xs text-gray-400">최고연속</div>
+        </div>
+      </div>
+
+      <DailyMissionPanel save={save} dailyProgress={dailyProgress} />
+
+      <div className="mt-4 space-y-2 w-full max-w-xs">
+        <button onClick={()=>{sfxClick();onPlay()}} className="btn-game bg-gradient-to-r from-green-400 to-cyan-500 text-black font-bold text-xl px-12 py-4 rounded-full shadow-lg shadow-cyan-500/30 w-full">
+          🎮 모험 시작!
+        </button>
+        <button onClick={()=>{sfxClick();onTimeAttack()}} className="btn-game bg-gradient-to-r from-orange-400 to-red-500 text-white font-bold px-8 py-3 rounded-full w-full">
+          ⏱️ 시간 도전!
+        </button>
+        <div className="flex gap-2">
+          <button onClick={()=>{sfxClick();onDex()}} className="btn-game bg-white/10 text-white font-bold px-6 py-3 rounded-full flex-1">
+            📖 도감
+          </button>
+          <button onClick={()=>{sfxClick();onWrongReview()}} className="btn-game bg-white/10 text-white font-bold px-6 py-3 rounded-full flex-1 relative">
+            📝 오답노트
+            {wrongCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">{wrongCount}</span>}
+          </button>
+        </div>
+      </div>
+
+      <button onClick={()=>{sfxClick();onParentDash()}} className="btn-game absolute top-4 left-4 z-50 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-2xl">
+        👨‍👩‍👧
+      </button>
+    </div>
+  );
+}
+
+// -- Level Select --
+function LevelSelect({onSelect, onBack, onBoss, save}) {
+  function getLevelStats(level) {
+    return save.stats[level] || {correct:0, total:0, bestScore:0};
+  }
+  function isUnlocked(level) {
+    if (level === 1) return true;
+    const prevStats = getLevelStats(level - 1);
+    const req = LEVEL_INFO[level - 2].unlockReq;
+    return prevStats.correct >= req;
+  }
+  function getMonsterCount(level) {
+    let count = 0;
+    for (const [key, val] of Object.entries(save.monstersCaught || {})) {
+      if (key.startsWith(`L${level}_`)) count++;
+    }
+    return count;
+  }
+
+  return (
+    <div className="h-full flex flex-col bg-gradient-to-b from-slate-900 to-teal-900 text-white">
+      <div className="flex items-center p-4">
+        <button onClick={()=>{sfxClick();onBack()}} className="btn-game text-2xl mr-3">⬅️</button>
+        <h2 className="text-xl font-bold">레벨 선택</h2>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 pb-8">
+        <div className="space-y-3">
+          {LEVEL_INFO.map((info) => {
+            const unlocked = isUnlocked(info.level);
+            const stats = getLevelStats(info.level);
+            const monsters = getMonsterCount(info.level);
+            const stars = getLevelStars(save, info.level);
+            const bossAvailable = stars >= 3 && !save.bossDefeated[info.level];
+            const bossDefeated = !!save.bossDefeated[info.level];
+            return (
+              <div key={info.level} className="relative">
+                <button
+                  onClick={() => unlocked && (sfxClick(), onSelect(info.level))}
+                  className={`btn-game w-full rounded-2xl p-4 flex items-center gap-4 text-left transition-all
+                    ${unlocked ? `bg-gradient-to-r ${info.color} shadow-lg` : 'bg-gray-700/50 opacity-60'}`}>
+                  <div className="text-4xl">{unlocked ? info.icon : "🔒"}</div>
+                  <div className="flex-1">
+                    <div className="font-bold text-lg">Level {info.level}: {info.name}</div>
+                    <div className="text-sm opacity-80">{info.desc}</div>
+                    {unlocked && stats.total > 0 && (
+                      <div className="flex gap-3 mt-1 text-xs opacity-70">
+                        <span>✅ {stats.correct}문제</span>
+                        <span>🏆 최고 {stats.bestScore}점</span>
+                        <span>🐾 몬스터 {monsters}마리</span>
+                        <span>{"⭐".repeat(stars)}{"☆".repeat(3-stars)}</span>
+                      </div>
+                    )}
+                  </div>
+                  {bossDefeated && <span className="text-2xl">🏅</span>}
+                </button>
+                {bossAvailable && (
+                  <button
+                    onClick={() => { sfxClick(); onBoss(info.level); }}
+                    className="btn-game absolute -right-1 -top-1 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse shadow-lg">
+                    👹 보스전!
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -- Monster Dex --
+function MonsterDex({onBack, save}) {
+  const monsters = save.monstersCaught || {};
+  const entries = Object.entries(monsters).sort((a,b) => b[1].correctCount - a[1].correctCount);
+
+  return (
+    <div className="h-full flex flex-col bg-gradient-to-b from-slate-900 to-teal-900 text-white">
+      <div className="flex items-center p-4">
+        <button onClick={()=>{sfxClick();onBack()}} className="btn-game text-2xl mr-3">⬅️</button>
+        <h2 className="text-xl font-bold">📖 수학 몬스터 도감</h2>
+        <div className="ml-auto text-sm text-gray-400">{entries.length}마리</div>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 pb-8">
+        {entries.length === 0 ? (
+          <div className="text-center text-gray-500 mt-20">
+            <div className="text-6xl mb-4">🥚</div>
+            <div>아직 잡은 몬스터가 없어요!</div>
+            <div className="text-sm mt-2">퀴즈를 풀어 몬스터를 잡아보세요!</div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-2">
+            {entries.map(([key, data]) => {
+              const stage = getMonsterStage(data.correctCount);
+              const emoji = getMonsterEmoji(key, stage);
+              return (
+                <div key={key} className="monster-card bg-white/5 rounded-xl p-2 text-center">
+                  <div className={`text-3xl mb-1 ${stage === 'evolved' ? 'animate-float' : ''}`}>{emoji}</div>
+                  <div className="text-[10px] truncate opacity-70">{data.problem}</div>
+                  <div className="flex justify-center gap-0.5 mt-1">
+                    {[1,2,3,4,5].map(i => (
+                      <div key={i} className={`w-1.5 h-1.5 rounded-full ${data.correctCount >= i ? 'bg-yellow-400' : 'bg-white/20'}`}/>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// -- Story Intro --
+function StoryIntro({level, onStart}) {
+  const storyText = STORY_TEXTS[level] || STORY_TEXTS.intro;
+  const info = LEVEL_INFO[level - 1];
+
+  return (
+    <div className="h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-slate-900 via-indigo-900 to-slate-900 text-white animate-fade-in">
+      <div className="text-6xl mb-4 animate-float">{info.icon}</div>
+      <h2 className="text-xl font-bold mb-2 text-yellow-300">Level {level}: {info.name}</h2>
+      <div className="bg-white/10 rounded-2xl p-5 max-w-sm mb-6">
+        <p className="text-center text-gray-200 leading-relaxed">{storyText}</p>
+      </div>
+      <button onClick={()=>{sfxClick();onStart()}} className="btn-game bg-gradient-to-r from-green-400 to-cyan-500 text-black font-bold text-xl px-12 py-4 rounded-full shadow-lg">
+        도전! 💪
+      </button>
+    </div>
+  );
+}
+
+// -- Quiz Screen --
+function QuizScreen({level, save, onUpdateSave, onBack, onComplete}) {
+  const [problems] = useState(() => generateQuiz(level));
+  const [qIndex, setQIndex] = useState(0);
+  const [answered, setAnswered] = useState(null);
+  const [score, setScore] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [wrongCount, setWrongCount] = useState(0);
+  const [showResult, setShowResult] = useState(null);
+  const [streak, setStreak] = useState(save.streak || 0);
+  const [showHelper, setShowHelper] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+  const [useInput, setUseInput] = useState(level >= 6);
+  const inputRef = useRef(null);
+  const startTimeRef = useRef(Date.now());
+
+  const currentP = problems[qIndex];
+  const progress = (qIndex / problems.length) * 100;
+  const isSubLevel = (level === 2);
+
+  useEffect(() => {
+    if (currentP && !answered) {
+      const t = setTimeout(() => speakProblem(currentP.a, currentP.b, currentP.op), 300);
+      return () => clearTimeout(t);
+    }
+  }, [qIndex]);
+
+  useEffect(() => { speakQuizStart(level); }, []);
+
+  function handleAnswer(selected) {
+    if (answered) return;
+    const correct = selected === currentP.answer;
+    const monsterKey = `L${level}_${currentP.a}${currentP.op}${currentP.b}`;
+    const newSave = JSON.parse(JSON.stringify(save));
+
+    if (!newSave.monstersCaught) newSave.monstersCaught = {};
+    if (!newSave.stats) newSave.stats = {};
+    if (!newSave.stats[level]) newSave.stats[level] = {correct:0, total:0, bestScore:0};
+    if (!newSave.wrongAnswers) newSave.wrongAnswers = [];
+
+    const prev = newSave.monstersCaught[monsterKey] || {correctCount:0, wrongCount:0, problem:`${currentP.a}${currentP.op}${currentP.b}=${currentP.answer}`};
+    const oldMonsterCount = Object.keys(newSave.monstersCaught).length;
+
+    let resultType;
+    let points = 10;
+
+    if (correct) {
+      sfxCorrect();
+      const newStreak = streak + 1;
+      setStreak(newStreak);
+      if (newStreak >= 3) { points += newStreak * 2; sfxCombo(newStreak); }
+
+      const newCC = prev.correctCount + 1;
+      prev.correctCount = newCC;
+      newSave.monstersCaught[monsterKey] = prev;
+      newSave.totalScore = (newSave.totalScore || 0) + points;
+      newSave.totalCorrect = (newSave.totalCorrect || 0) + 1;
+      newSave.streak = newStreak;
+      if (newStreak > (newSave.bestStreak || 0)) newSave.bestStreak = newStreak;
+      newSave.stats[level].correct += 1;
+
+      // Update daily progress
+      const dp = getDailyProgress(newSave);
+      dp.correctToday = (dp.correctToday || 0) + 1;
+      if (newStreak > (dp.bestStreakToday || 0)) dp.bestStreakToday = newStreak;
+      const newMonsterCount = Object.keys(newSave.monstersCaught).length;
+      if (newMonsterCount > oldMonsterCount) dp.newMonstersToday = (dp.newMonstersToday || 0) + 1;
+      updateDailyProgress(newSave, dp);
+
+      // Remove from wrong answers if it was there
+      newSave.wrongAnswers = newSave.wrongAnswers.filter(w => !(w.a === currentP.a && w.b === currentP.b && w.op === currentP.op));
+
+      const oldStage = getMonsterStage(newCC - 1);
+      const newStage = getMonsterStage(newCC);
+      if (newStage === "evolved" && oldStage !== "evolved") { resultType = "evolved"; sfxEvolve(); setTimeout(speakEvolve, 500); }
+      else if (newStage === "baby" && oldStage !== "baby") { resultType = "hatched"; sfxHatch(); setTimeout(speakHatch, 500); }
+      else { resultType = "caught"; setTimeout(() => speakCorrect(currentP.a, currentP.b, currentP.op, currentP.answer, newStreak), 500); }
+
+      setScore(s => s + points);
+      setCorrectCount(c => c + 1);
+    } else {
+      sfxWrong();
+      setStreak(0);
+      newSave.streak = 0;
+      prev.wrongCount = (prev.wrongCount || 0) + 1;
+      newSave.monstersCaught[monsterKey] = prev;
+      newSave.totalWrong = (newSave.totalWrong || 0) + 1;
+      resultType = "escaped";
+      setWrongCount(w => w + 1);
+
+      // Add to wrong answers
+      const exists = newSave.wrongAnswers.find(w => w.a === currentP.a && w.b === currentP.b && w.op === currentP.op);
+      if (!exists) {
+        newSave.wrongAnswers.push({
+          a: currentP.a, b: currentP.b, op: currentP.op,
+          answer: currentP.answer, level, timestamp: Date.now(),
+          wrongAttempt: selected
+        });
+      }
+
+      // Update daily progress
+      const dp = getDailyProgress(newSave);
+      dp.wrongToday = (dp.wrongToday || 0) + 1;
+      updateDailyProgress(newSave, dp);
+
+      setTimeout(() => speakWrong(currentP.a, currentP.b, currentP.op, currentP.answer), 500);
+    }
+
+    newSave.stats[level].total += 1;
+
+    // Update parent stats
+    if (!newSave.parentStats) newSave.parentStats = { dailyRecords: {}, totalStudyTime: 0 };
+    const today = getTodayString();
+    if (!newSave.parentStats.dailyRecords[today]) newSave.parentStats.dailyRecords[today] = { problems: 0, correct: 0, time: 0 };
+    newSave.parentStats.dailyRecords[today].problems += 1;
+    if (correct) newSave.parentStats.dailyRecords[today].correct += 1;
+
+    setAnswered({correct, selected});
+    onUpdateSave(newSave);
+
+    setTimeout(() => setShowResult(resultType), 400);
+  }
+
+  function handleInputSubmit() {
+    const val = parseInt(inputValue);
+    if (isNaN(val)) return;
+    handleAnswer(val);
+  }
+
+  function handleNext() {
+    setShowResult(null);
+    setAnswered(null);
+    setShowHelper(false);
+    setInputValue("");
+    if (qIndex + 1 >= problems.length) {
+      const newSave = JSON.parse(JSON.stringify(save));
+      if (!newSave.stats[level]) newSave.stats[level] = {correct:0, total:0, bestScore:0};
+      if (score > newSave.stats[level].bestScore) newSave.stats[level].bestScore = score;
+
+      // Update daily quiz complete count
+      const dp = getDailyProgress(newSave);
+      dp.quizCompleteToday = (dp.quizCompleteToday || 0) + 1;
+      updateDailyProgress(newSave, dp);
+
+      // Update study time
+      const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
+      if (!newSave.parentStats) newSave.parentStats = { dailyRecords: {}, totalStudyTime: 0 };
+      newSave.parentStats.totalStudyTime = (newSave.parentStats.totalStudyTime || 0) + elapsed;
+      const today = getTodayString();
+      if (!newSave.parentStats.dailyRecords[today]) newSave.parentStats.dailyRecords[today] = { problems:0, correct:0, time:0 };
+      newSave.parentStats.dailyRecords[today].time = (newSave.parentStats.dailyRecords[today].time || 0) + elapsed;
+
+      // Check daily missions
+      checkAndCompleteMissions(newSave);
+
+      onUpdateSave(newSave);
+      onComplete(score, correctCount, wrongCount);
+    } else {
+      setQIndex(qIndex + 1);
+    }
+  }
+
+  useEffect(() => {
+    if (useInput && inputRef.current && !answered) {
+      inputRef.current.focus();
+    }
+  }, [qIndex, useInput, answered]);
+
+  if (!currentP) return null;
+
+  const monsterKey = `L${level}_${currentP.a}${currentP.op}${currentP.b}`;
+  const opColor = currentP.op === '+' ? 'text-green-400' : currentP.op === '-' ? 'text-red-400' : currentP.op === '×' ? 'text-blue-400' : 'text-purple-400';
+
+  return (
+    <div className="h-full flex flex-col bg-gradient-to-b from-slate-900 to-teal-900 text-white relative">
+      {/* Header */}
+      <div className="p-4 pb-2">
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={()=>{sfxClick();onBack()}} className="btn-game text-xl">⬅️</button>
+          <div className="text-sm font-bold">Level {level} • {qIndex+1}/{problems.length}</div>
+          <div className="flex items-center gap-2">
+            {streak >= 3 && <span className="text-orange-400 font-bold text-sm">{streak}🔥</span>}
+            <span className="text-yellow-300 font-bold">⭐ {score}</span>
+          </div>
+        </div>
+        <div className="bg-white/10 rounded-full h-2 overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-green-400 to-cyan-500 rounded-full progress-bar" style={{width:`${progress}%`}}/>
+        </div>
+      </div>
+
+      {/* Question Area */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 pb-4">
+        <div className="w-full max-w-md animate-fade-in">
+          <div className="text-center mb-6">
+            <div className="bg-white/10 rounded-3xl p-6 mb-4 relative">
+              <div className="text-5xl font-black mb-2 tracking-wider">
+                <span className="text-white">{currentP.a}</span>
+                <span className={`mx-3 ${opColor}`}>{currentP.op}</span>
+                <span className="text-white">{currentP.b}</span>
+                <span className="text-yellow-300 mx-3">=</span>
+                <span className="text-yellow-300">?</span>
+              </div>
+              {answered && (
+                <div className={`text-2xl font-bold mt-2 ${answered.correct ? 'text-green-400' : 'text-red-400'}`}>
+                  {answered.correct ? '✅ 정답!' : `❌ 정답: ${currentP.answer}`}
+                </div>
+              )}
+              <button onClick={() => speakProblem(currentP.a, currentP.b, currentP.op)}
+                className="btn-game absolute top-3 right-3 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-xl">
+                🔊
+              </button>
+            </div>
+
+            {/* Visual Helper (for early levels) */}
+            {(level <= 2 || (level <= 4 && currentP.a <= 10) || (level === 9 && currentP.a <= 5 && currentP.b <= 5)) && (
+              <>
+                {!showHelper && !answered && (
+                  <button onClick={() => setShowHelper(true)} className="btn-game bg-white/10 px-4 py-2 rounded-full text-sm mb-3">
+                    💡 힌트 보기
+                  </button>
+                )}
+                <VisualHelper a={currentP.a} b={currentP.b} op={currentP.op} countEmoji={currentP.countEmoji} show={showHelper || (isSubLevel && !answered)} />
+              </>
+            )}
+          </div>
+
+          {/* Answer Area */}
+          {!useInput ? (
+            <div className="grid grid-cols-2 gap-3">
+              {currentP.choices.map((choice, i) => (
+                <button key={i} onClick={() => handleAnswer(choice)}
+                  disabled={!!answered}
+                  className={`btn-game p-5 rounded-2xl text-3xl font-black transition-all
+                    ${answered
+                      ? (choice === currentP.answer ? 'bg-green-500 scale-105' : answered.selected === choice ? 'bg-red-500 animate-shake' : 'bg-white/5 opacity-50')
+                      : 'bg-white/10 hover:bg-white/20 active:scale-95'
+                    }`}>
+                  {choice}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <input
+                  ref={inputRef}
+                  type="number"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleInputSubmit()}
+                  disabled={!!answered}
+                  className="bg-white/10 border-2 border-white/30 rounded-2xl px-6 py-4 text-4xl font-black text-center w-40 text-white focus:outline-none focus:border-cyan-400"
+                  placeholder="?"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                />
+              </div>
+              {!answered && (
+                <button onClick={handleInputSubmit}
+                  className="btn-game bg-gradient-to-r from-green-400 to-cyan-500 text-black font-bold px-10 py-3 rounded-full text-xl">
+                  확인! ✓
+                </button>
+              )}
+              {!answered && (
+                <div className="mt-4">
+                  <div className="text-xs text-gray-500 mb-2">또는 보기에서 고르기:</div>
+                  <div className="flex gap-2 justify-center flex-wrap">
+                    {currentP.choices.map((choice, i) => (
+                      <button key={i} onClick={() => {setInputValue(String(choice)); handleAnswer(choice)}}
+                        className="btn-game bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl text-lg font-bold">
+                        {choice}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {level >= 3 && !answered && (
+            <button onClick={() => setUseInput(!useInput)} className="btn-game w-full mt-3 text-xs text-gray-500 py-2">
+              {useInput ? "🔢 보기에서 고르기로 바꾸기" : "⌨️ 직접 입력하기로 바꾸기"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Result Overlay */}
+      {showResult && (
+        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-40 animate-fade-in" onClick={handleNext}>
+          <Confetti show={showResult !== "escaped"} />
+          {showResult === "caught" && (
+            <div className="text-center animate-bounce-in">
+              <div className="text-7xl mb-4">{getMonsterEmoji(monsterKey, "egg")}</div>
+              <div className="text-2xl font-bold text-yellow-300 mb-2">🎉 몬스터 알 획득!</div>
+              <div className="text-gray-300 text-lg">{currentP.a} {currentP.op} {currentP.b} = {currentP.answer}</div>
+              {streak >= 3 && <div className="text-orange-400 font-bold mt-2">{streak}연속 정답! 🔥 보너스 +{streak*2}점</div>}
+            </div>
+          )}
+          {showResult === "hatched" && (
+            <div className="text-center animate-hatch">
+              <div className="text-8xl mb-4">{getMonsterEmoji(monsterKey, "baby")}</div>
+              <div className="text-2xl font-bold text-green-300 mb-2">🐣 알에서 부화했어요!</div>
+              <div className="text-gray-300">수학 몬스터가 태어났어요!</div>
+            </div>
+          )}
+          {showResult === "evolved" && (
+            <div className="text-center animate-glow">
+              <div className="text-9xl mb-4">{getMonsterEmoji(monsterKey, "evolved")}</div>
+              <div className="text-2xl font-bold text-purple-300 mb-2">⚡ 진화 완료!</div>
+              <div className="text-gray-300">최종 진화 몬스터! 대단해요!</div>
+            </div>
+          )}
+          {showResult === "escaped" && (
+            <div className="text-center">
+              <div className="text-7xl mb-4 animate-escape">💨</div>
+              <div className="text-2xl font-bold text-red-300 mb-2">도망갔어요!</div>
+              <div className="text-gray-300 text-lg">{currentP.a} {currentP.op} {currentP.b} = <span className="text-yellow-300 font-bold">{currentP.answer}</span></div>
+              {(level <= 2 || currentP.a <= 10) && (
+                <div className="mt-3">
+                  <VisualHelper a={currentP.a} b={currentP.b} op={currentP.op} countEmoji={currentP.countEmoji} show={true} />
+                </div>
+              )}
+            </div>
+          )}
+          <button className="btn-game mt-6 bg-white/20 px-8 py-3 rounded-full font-bold text-lg">
+            {qIndex + 1 >= problems.length ? "결과 보기 →" : "다음 →"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// -- Quiz Complete --
+function QuizComplete({score, correctCount, wrongCount, level, save, onHome, onRetry}) {
+  const total = correctCount + wrongCount;
+  const percent = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+  const stars = percent >= 90 ? 3 : percent >= 70 ? 2 : percent >= 50 ? 1 : 0;
+
+  useEffect(() => { setTimeout(() => speakQuizComplete(percent), 500); }, []);
+  const messages = [
+    "다시 도전해봐요! 💪",
+    "잘했어요! 조금만 더! ⭐",
+    "대단해요! 거의 완벽! ⭐⭐",
+    "완벽해요! 천재! ⭐⭐⭐",
+  ];
+
+  return (
+    <div className="h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-emerald-900 via-teal-900 to-slate-900 text-white">
+      <Confetti show={stars >= 2} />
+      <div className="text-6xl mb-4 animate-float">{stars >= 3 ? "🏆" : stars >= 2 ? "🥈" : stars >= 1 ? "🥉" : "💪"}</div>
+      <h2 className="text-2xl font-bold mb-2">퀴즈 완료!</h2>
+      <div className="text-yellow-300 text-4xl font-black mb-2">⭐ {score}점</div>
+      <div className="text-lg mb-4">{messages[stars]}</div>
+
+      <div className="bg-white/10 rounded-2xl p-5 mb-6 w-full max-w-xs">
+        <div className="flex justify-between mb-2">
+          <span className="text-gray-400">맞은 문제</span>
+          <span className="text-green-400 font-bold">{correctCount}개</span>
+        </div>
+        <div className="flex justify-between mb-2">
+          <span className="text-gray-400">틀린 문제</span>
+          <span className="text-red-400 font-bold">{wrongCount}개</span>
+        </div>
+        <div className="flex justify-between mb-2">
+          <span className="text-gray-400">정답률</span>
+          <span className="text-yellow-300 font-bold">{percent}%</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-400">최고 연속</span>
+          <span className="text-orange-400 font-bold">{save.bestStreak || 0}🔥</span>
+        </div>
+        <div className="mt-3 flex justify-center gap-1">
+          {[1,2,3].map(i => (
+            <span key={i} className={`text-3xl ${stars >= i ? '' : 'opacity-20'}`}>⭐</span>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-3">
+        <button onClick={()=>{sfxClick();onRetry()}} className="btn-game bg-gradient-to-r from-green-400 to-cyan-500 text-black font-bold px-8 py-3 rounded-full">
+          🔄 다시 하기
+        </button>
+        <button onClick={()=>{sfxClick();onHome()}} className="btn-game bg-white/10 font-bold px-8 py-3 rounded-full">
+          🏠 홈으로
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// BOSS BATTLE SCREEN
+// ============================================================
+function BossBattle({level, save, onUpdateSave, onBack, onVictory}) {
+  const [problems] = useState(() => generateBossProblems(level));
+  const [qIndex, setQIndex] = useState(0);
+  const [bossHP, setBossHP] = useState(100);
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [answered, setAnswered] = useState(false);
+  const [score, setScore] = useState(0);
+  const [bossHit, setBossHit] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
+  const [victory, setVictory] = useState(false);
+  const [bossDialogue, setBossDialogue] = useState(BOSS_DIALOGUES[0]);
+  const timerRef = useRef(null);
+  const bossEmoji = BOSS_EMOJIS[level % BOSS_EMOJIS.length];
+
+  useEffect(() => {
+    speak("보스 몬스터가 나타났다! 30초 안에 물리치세요!");
+    timerRef.current = setInterval(() => {
+      setTimeLeft(t => {
+        if (t <= 1) {
+          clearInterval(timerRef.current);
+          setGameOver(true);
+          speak("시간 초과! 보스가 너무 강했어요!");
+          return 0;
+        }
+        if (t <= 6) sfxTimeWarning();
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (victory || gameOver) {
+      clearInterval(timerRef.current);
+    }
+  }, [victory, gameOver]);
+
+  function handleAnswer(selected) {
+    if (answered || gameOver || victory) return;
+    const currentP = problems[qIndex % problems.length];
+    const correct = selected === currentP.answer;
+
+    if (correct) {
+      sfxBossHit();
+      const damage = 15 + Math.floor(Math.random() * 10);
+      const newHP = Math.max(0, bossHP - damage);
+      setBossHP(newHP);
+      setBossHit(true);
+      setScore(s => s + 20);
+      setBossDialogue(BOSS_DIALOGUES[Math.floor(Math.random() * BOSS_DIALOGUES.length)]);
+      setTimeout(() => setBossHit(false), 300);
+
+      if (newHP <= 0) {
+        clearInterval(timerRef.current);
+        setVictory(true);
+        sfxBossDefeat();
+        speak("보스를 물리쳤어요! 대단해요!");
+
+        const newSave = JSON.parse(JSON.stringify(save));
+        if (!newSave.bossDefeated) newSave.bossDefeated = {};
+        newSave.bossDefeated[level] = true;
+        newSave.totalScore = (newSave.totalScore || 0) + 100;
+
+        // Add boss monster to collection
+        const bossKey = `BOSS_L${level}`;
+        newSave.monstersCaught[bossKey] = {
+          correctCount: 5,
+          wrongCount: 0,
+          problem: `보스 Lv${level}`,
+        };
+
+        // Update daily progress
+        const dp = getDailyProgress(newSave);
+        dp.bossDefeatedToday = (dp.bossDefeatedToday || 0) + 1;
+        updateDailyProgress(newSave, dp);
+
+        checkAndCompleteMissions(newSave);
+        onUpdateSave(newSave);
+      }
+    } else {
+      sfxWrong();
+    }
+
+    setAnswered(true);
+    setTimeout(() => {
+      setAnswered(false);
+      setQIndex(qi => qi + 1);
+    }, 500);
+  }
+
+  const currentP = problems[qIndex % problems.length];
+
+  if (victory) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-red-900 via-orange-900 to-slate-900 text-white">
+        <Confetti show={true} />
+        <div className="text-8xl mb-4 animate-glow">{bossEmoji}</div>
+        <h2 className="text-3xl font-black text-yellow-300 mb-2">보스 처치!</h2>
+        <p className="text-gray-300 mb-4">특별 몬스터를 획득했어요!</p>
+        <div className="text-yellow-300 text-2xl font-bold mb-6">+100점 보너스!</div>
+        <button onClick={()=>{sfxClick();onVictory()}} className="btn-game bg-gradient-to-r from-green-400 to-cyan-500 text-black font-bold px-10 py-4 rounded-full text-xl">
+          🏠 돌아가기
+        </button>
+      </div>
+    );
+  }
+
+  if (gameOver) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-gray-900 via-red-900 to-slate-900 text-white">
+        <div className="text-8xl mb-4">{bossEmoji}</div>
+        <h2 className="text-2xl font-bold text-red-300 mb-2">시간 초과!</h2>
+        <p className="text-gray-300 mb-2">보스 HP: {bossHP}% 남음</p>
+        <p className="text-gray-400 mb-6">다시 도전해보세요!</p>
+        <button onClick={()=>{sfxClick();onBack()}} className="btn-game bg-white/20 font-bold px-10 py-4 rounded-full text-xl">
+          돌아가기
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col bg-gradient-to-b from-red-900 via-slate-900 to-slate-900 text-white relative">
+      {/* Boss Info */}
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={()=>{sfxClick();clearInterval(timerRef.current);onBack()}} className="btn-game text-xl">⬅️</button>
+          <div className={`text-2xl font-black ${timeLeft <= 5 ? 'animate-timer-pulse text-red-400' : 'text-yellow-300'}`}>
+            ⏱️ {timeLeft}초
+          </div>
+          <span className="text-yellow-300 font-bold">⭐ {score}</span>
+        </div>
+
+        {/* Boss HP Bar */}
+        <div className="bg-white/10 rounded-full h-4 overflow-hidden mb-2">
+          <div className="h-full bg-gradient-to-r from-red-500 to-red-600 rounded-full transition-all duration-300" style={{width:`${bossHP}%`}}/>
+        </div>
+        <div className="text-center text-xs text-gray-400">보스 HP: {bossHP}%</div>
+      </div>
+
+      {/* Boss Display */}
+      <div className="flex flex-col items-center mb-4">
+        <div className={`text-8xl ${bossHit ? 'animate-boss-hit' : 'animate-boss-idle'}`}>{bossEmoji}</div>
+        <div className="bg-black/50 rounded-xl px-4 py-2 mt-2 max-w-xs">
+          <p className="text-sm text-gray-300 text-center italic">"{bossDialogue}"</p>
+        </div>
+      </div>
+
+      {/* Problem */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4">
+        <div className="text-4xl font-black mb-6 tracking-wider">
+          <span className="text-white">{currentP.a}</span>
+          <span className="mx-3 text-yellow-400">{currentP.op}</span>
+          <span className="text-white">{currentP.b}</span>
+          <span className="text-yellow-300 mx-2">=</span>
+          <span className="text-yellow-300">?</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
+          {currentP.choices.map((choice, i) => (
+            <button key={`${qIndex}-${i}`} onClick={() => handleAnswer(choice)}
+              disabled={answered}
+              className={`btn-game p-4 rounded-2xl text-2xl font-black transition-all
+                ${answered ? 'opacity-50' : 'bg-white/10 hover:bg-white/20 active:scale-95'}`}>
+              {choice}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// WRONG ANSWER REVIEW
+// ============================================================
+function WrongAnswerReview({save, onUpdateSave, onBack}) {
+  const [mode, setMode] = useState("list"); // list | practice
+  const [practiceIndex, setPracticeIndex] = useState(0);
+  const [answered, setAnswered] = useState(null);
+  const wrongAnswers = save.wrongAnswers || [];
+
+  function startPractice() {
+    if (wrongAnswers.length === 0) return;
+    setMode("practice");
+    setPracticeIndex(0);
+    setAnswered(null);
+    speak("약점 훈련을 시작합니다! 화이팅!");
+  }
+
+  function handlePracticeAnswer(selected) {
+    if (answered) return;
+    const w = wrongAnswers[practiceIndex];
+    const correct = selected === w.answer;
+
+    if (correct) {
+      sfxCorrect();
+      // Remove from wrong answers
+      const newSave = JSON.parse(JSON.stringify(save));
+      newSave.wrongAnswers = newSave.wrongAnswers.filter((_, i) => i !== practiceIndex);
+      onUpdateSave(newSave);
+      speak(`정답! ${w.a} ${opName(w.op)} ${w.b}는 ${w.answer}!`);
+    } else {
+      sfxWrong();
+      speak(`아쉬워요. ${w.a} ${opName(w.op)} ${w.b}는 ${w.answer}이에요.`);
+    }
+    setAnswered({correct, selected});
+  }
+
+  function nextPractice() {
+    const updatedWrong = (save.wrongAnswers || []);
+    if (practiceIndex + 1 >= updatedWrong.length || updatedWrong.length === 0) {
+      setMode("list");
+      if (updatedWrong.length === 0) speak("모든 오답을 정복했어요! 대단해요!");
+    } else {
+      setPracticeIndex(p => Math.min(p, updatedWrong.length - 1));
+      setAnswered(null);
+    }
+  }
+
+  if (mode === "practice" && wrongAnswers.length > 0) {
+    const w = wrongAnswers[Math.min(practiceIndex, wrongAnswers.length - 1)];
+    // Generate choices
+    const wrongs = new Set();
+    while (wrongs.size < 3) {
+      const offset = rand(1, Math.max(3, Math.ceil(Math.abs(w.answer) * 0.5) + 1));
+      const v = Math.random() < 0.5 ? w.answer + offset : Math.max(0, w.answer - offset);
+      if (v !== w.answer && v >= 0) wrongs.add(v);
+    }
+    const choices = shuffle([w.answer, ...wrongs]);
+
+    return (
+      <div className="h-full flex flex-col bg-gradient-to-b from-slate-900 to-red-900 text-white">
+        <div className="flex items-center p-4">
+          <button onClick={()=>{sfxClick();setMode("list")}} className="btn-game text-2xl mr-3">⬅️</button>
+          <h2 className="text-xl font-bold">💪 약점 훈련</h2>
+          <div className="ml-auto text-sm text-gray-400">{practiceIndex+1}/{wrongAnswers.length}</div>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center px-4">
+          <div className="bg-white/10 rounded-3xl p-6 mb-6 w-full max-w-sm">
+            <div className="text-5xl font-black text-center tracking-wider">
+              {w.a} <span className="text-yellow-400">{w.op}</span> {w.b} = ?
+            </div>
+            {answered && (
+              <div className={`text-2xl font-bold mt-3 text-center ${answered.correct ? 'text-green-400' : 'text-red-400'}`}>
+                {answered.correct ? '✅ 정답!' : `❌ 정답: ${w.answer}`}
+              </div>
+            )}
+          </div>
+          {!answered ? (
+            <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
+              {choices.map((c, i) => (
+                <button key={i} onClick={() => handlePracticeAnswer(c)}
+                  className="btn-game p-5 rounded-2xl text-3xl font-black bg-white/10 hover:bg-white/20">
+                  {c}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <button onClick={nextPractice} className="btn-game bg-gradient-to-r from-green-400 to-cyan-500 text-black font-bold px-10 py-3 rounded-full text-xl">
+              다음 →
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col bg-gradient-to-b from-slate-900 to-teal-900 text-white">
+      <div className="flex items-center p-4">
+        <button onClick={()=>{sfxClick();onBack()}} className="btn-game text-2xl mr-3">⬅️</button>
+        <h2 className="text-xl font-bold">📝 오답 노트</h2>
+        <div className="ml-auto text-sm text-gray-400">{wrongAnswers.length}문제</div>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 pb-8">
+        {wrongAnswers.length === 0 ? (
+          <div className="text-center text-gray-400 mt-20">
+            <div className="text-6xl mb-4">🎉</div>
+            <div className="text-xl font-bold text-green-400">축하해요!</div>
+            <div className="mt-2">틀린 문제가 없어요!</div>
+            <div className="text-sm mt-1">완벽한 수학 천재!</div>
+          </div>
+        ) : (
+          <>
+            <button onClick={startPractice}
+              className="btn-game w-full bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold py-4 rounded-2xl mb-4 text-lg">
+              💪 약점 훈련 시작!
+            </button>
+            <div className="space-y-2">
+              {wrongAnswers.map((w, i) => (
+                <div key={i} className="bg-white/5 rounded-xl p-3 flex items-center justify-between">
+                  <div>
+                    <span className="text-lg font-bold">{w.a} {w.op} {w.b} = {w.answer}</span>
+                    <span className="text-xs text-gray-500 ml-2">Lv.{w.level}</span>
+                  </div>
+                  <div className="text-red-400 text-sm">오답: {w.wrongAttempt}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// TIME ATTACK MODE
+// ============================================================
+function TimeAttackLevelSelect({onSelect, onBack, save}) {
+  return (
+    <div className="h-full flex flex-col bg-gradient-to-b from-slate-900 to-orange-900 text-white">
+      <div className="flex items-center p-4">
+        <button onClick={()=>{sfxClick();onBack()}} className="btn-game text-2xl mr-3">⬅️</button>
+        <h2 className="text-xl font-bold">⏱️ 시간 도전 - 레벨 선택</h2>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 pb-8">
+        <div className="space-y-3">
+          {LEVEL_INFO.map((info) => {
+            const best = (save.timeAttackBest || {})[info.level] || 0;
+            const unlocked = info.level === 1 || (save.stats[info.level - 1] && save.stats[info.level - 1].correct >= info.unlockReq);
+            return (
+              <button key={info.level}
+                onClick={() => unlocked && (sfxClick(), onSelect(info.level))}
+                className={`btn-game w-full rounded-2xl p-4 flex items-center gap-4 text-left
+                  ${unlocked ? `bg-gradient-to-r ${info.color} shadow-lg` : 'bg-gray-700/50 opacity-60'}`}>
+                <div className="text-4xl">{unlocked ? "⏱️" : "🔒"}</div>
+                <div className="flex-1">
+                  <div className="font-bold">Level {info.level}: {info.name}</div>
+                  <div className="text-sm opacity-80">{info.desc}</div>
+                  {best > 0 && <div className="text-xs mt-1 opacity-70">🏆 최고: {best}문제</div>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TimeAttackGame({level, save, onUpdateSave, onBack}) {
+  const [timeLeft, setTimeLeft] = useState(60);
+  const [solved, setSolved] = useState(0);
+  const [currentP, setCurrentP] = useState(() => generateProblem(LEVEL_INFO[level - 1]));
+  const [answered, setAnswered] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    speak("시간 도전! 60초 안에 최대한 많이 풀어보세요!");
+    timerRef.current = setInterval(() => {
+      setTimeLeft(t => {
+        if (t <= 1) {
+          clearInterval(timerRef.current);
+          setGameOver(true);
+          return 0;
+        }
+        if (t <= 6) sfxTimeWarning();
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, []);
+
+  function handleAnswer(selected) {
+    if (answered || gameOver) return;
+    const correct = selected === currentP.answer;
+    if (correct) {
+      sfxCorrect();
+      setSolved(s => s + 1);
+      setStreak(s => s + 1);
+    } else {
+      sfxWrong();
+      setStreak(0);
+    }
+    setAnswered(true);
+    setTimeout(() => {
+      setAnswered(false);
+      setCurrentP(generateProblem(LEVEL_INFO[level - 1]));
+    }, 300);
+  }
+
+  useEffect(() => {
+    if (gameOver) {
+      const newSave = JSON.parse(JSON.stringify(save));
+      if (!newSave.timeAttackBest) newSave.timeAttackBest = {};
+      if (solved > (newSave.timeAttackBest[level] || 0)) {
+        newSave.timeAttackBest[level] = solved;
+      }
+      const dp = getDailyProgress(newSave);
+      dp.timeAttackToday = (dp.timeAttackToday || 0) + 1;
+      updateDailyProgress(newSave, dp);
+      checkAndCompleteMissions(newSave);
+      onUpdateSave(newSave);
+
+      if (solved >= 10) speak(`대단해요! ${solved}문제를 풀었어요!`);
+      else speak(`${solved}문제를 풀었어요. 다시 도전해봐요!`);
+    }
+  }, [gameOver]);
+
+  if (gameOver) {
+    const best = (save.timeAttackBest || {})[level] || 0;
+    const isNewRecord = solved > best;
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-orange-900 via-red-900 to-slate-900 text-white">
+        <Confetti show={isNewRecord} />
+        <div className="text-6xl mb-4 animate-float">⏱️</div>
+        <h2 className="text-2xl font-bold mb-2">시간 종료!</h2>
+        {isNewRecord && <div className="text-yellow-300 text-lg font-bold mb-2">🎉 새 기록!</div>}
+        <div className="text-4xl font-black text-yellow-300 mb-4">{solved}문제</div>
+        <div className="bg-white/10 rounded-2xl p-4 mb-6 w-full max-w-xs text-center">
+          <div className="text-gray-400 text-sm">이전 최고 기록: {best}문제</div>
+        </div>
+        <button onClick={()=>{sfxClick();onBack()}} className="btn-game bg-white/20 font-bold px-10 py-4 rounded-full text-xl">
+          돌아가기
+        </button>
+      </div>
+    );
+  }
+
+  const opColor = currentP.op === '+' ? 'text-green-400' : currentP.op === '-' ? 'text-red-400' : currentP.op === '×' ? 'text-blue-400' : 'text-purple-400';
+
+  return (
+    <div className="h-full flex flex-col bg-gradient-to-b from-orange-900 via-slate-900 to-slate-900 text-white relative">
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={()=>{sfxClick();clearInterval(timerRef.current);onBack()}} className="btn-game text-xl">⬅️</button>
+          <div className={`text-3xl font-black ${timeLeft <= 10 ? 'animate-timer-pulse text-red-400' : 'text-yellow-300'}`}>
+            ⏱️ {timeLeft}
+          </div>
+          <div className="text-right">
+            <div className="text-yellow-300 font-bold text-lg">{solved}문제</div>
+            {streak >= 3 && <div className="text-orange-400 text-xs">{streak}🔥</div>}
+          </div>
+        </div>
+        <div className="bg-white/10 rounded-full h-3 overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-yellow-400 to-red-500 rounded-full transition-all duration-1000" style={{width:`${(timeLeft/60)*100}%`}}/>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col items-center justify-center px-4">
+        <div className="bg-white/10 rounded-3xl p-6 mb-6 w-full max-w-sm">
+          <div className="text-5xl font-black text-center tracking-wider">
+            {currentP.a} <span className={opColor}>{currentP.op}</span> {currentP.b} = ?
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
+          {currentP.choices.map((choice, i) => (
+            <button key={`${solved}-${i}`} onClick={() => handleAnswer(choice)}
+              disabled={answered}
+              className={`btn-game p-5 rounded-2xl text-3xl font-black transition-all
+                ${answered ? 'opacity-50' : 'bg-white/10 hover:bg-white/20 active:scale-95'}`}>
+              {choice}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// PARENT DASHBOARD
+// ============================================================
+function ParentDashboard({save, onBack}) {
+  const ps = save.parentStats || { dailyRecords: {}, totalStudyTime: 0 };
+  const wrongAnswers = save.wrongAnswers || [];
+
+  // Get last 7 days
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dayName = ['일','월','화','수','목','금','토'][d.getDay()];
+    const record = ps.dailyRecords[key] || { problems: 0, correct: 0, time: 0 };
+    days.push({ key, dayName, ...record });
+  }
+
+  const maxProblems = Math.max(...days.map(d => d.problems), 1);
+  const totalProblems = days.reduce((s, d) => s + d.problems, 0);
+  const totalCorrect = days.reduce((s, d) => s + d.correct, 0);
+  const overallRate = totalProblems > 0 ? Math.round((totalCorrect / totalProblems) * 100) : 0;
+  const totalTime = Math.round((ps.totalStudyTime || 0) / 60);
+
+  // Weakness analysis
+  const opCounts = {};
+  for (const w of wrongAnswers) {
+    const key = opName(w.op);
+    opCounts[key] = (opCounts[key] || 0) + 1;
+  }
+  const weaknesses = Object.entries(opCounts).sort((a, b) => b[1] - a[1]);
+
+  return (
+    <div className="h-full flex flex-col bg-gradient-to-b from-slate-800 to-slate-900 text-white">
+      <div className="flex items-center p-4">
+        <button onClick={()=>{sfxClick();onBack()}} className="btn-game text-2xl mr-3">⬅️</button>
+        <h2 className="text-xl font-bold">👨‍👩‍👧 학습 리포트</h2>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 pb-8">
+        {/* Summary Stats */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="bg-white/10 rounded-xl p-3 text-center">
+            <div className="text-2xl font-bold text-blue-300">{totalTime}분</div>
+            <div className="text-xs text-gray-400">총 학습시간</div>
+          </div>
+          <div className="bg-white/10 rounded-xl p-3 text-center">
+            <div className="text-2xl font-bold text-green-300">{totalProblems}</div>
+            <div className="text-xs text-gray-400">7일 문제수</div>
+          </div>
+          <div className="bg-white/10 rounded-xl p-3 text-center">
+            <div className="text-2xl font-bold text-yellow-300">{overallRate}%</div>
+            <div className="text-xs text-gray-400">7일 정답률</div>
+          </div>
+        </div>
+
+        {/* Daily Chart */}
+        <div className="bg-white/5 rounded-2xl p-4 mb-4">
+          <h3 className="text-sm font-bold text-gray-300 mb-3">📊 최근 7일 학습량</h3>
+          <div className="flex items-end gap-2 h-32">
+            {days.map((d, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center">
+                <div className="text-xs text-gray-500 mb-1">{d.problems}</div>
+                <div className="w-full bg-white/10 rounded-t-lg relative overflow-hidden" style={{height: `${(d.problems / maxProblems) * 100}%`, minHeight: d.problems > 0 ? '8px' : '2px'}}>
+                  <div className="absolute bottom-0 w-full bg-gradient-to-t from-green-500 to-green-300 rounded-t-lg"
+                    style={{height: d.correct > 0 ? `${(d.correct / d.problems) * 100}%` : '0%'}}/>
+                </div>
+                <div className="text-xs text-gray-400 mt-1">{d.dayName}</div>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-4 mt-2 text-xs text-gray-500 justify-center">
+            <span>🟢 정답</span>
+            <span>⬜ 오답</span>
+          </div>
+        </div>
+
+        {/* Weakness Analysis */}
+        <div className="bg-white/5 rounded-2xl p-4 mb-4">
+          <h3 className="text-sm font-bold text-gray-300 mb-3">🎯 약점 분석</h3>
+          {weaknesses.length === 0 ? (
+            <p className="text-gray-500 text-sm">틀린 문제가 없습니다! 완벽해요!</p>
+          ) : (
+            <div className="space-y-2">
+              {weaknesses.map(([op, count]) => (
+                <div key={op} className="flex items-center gap-3">
+                  <span className="text-sm w-16">{op}</span>
+                  <div className="flex-1 bg-white/10 rounded-full h-3 overflow-hidden">
+                    <div className="h-full bg-red-500 rounded-full" style={{width:`${(count / wrongAnswers.length) * 100}%`}}/>
+                  </div>
+                  <span className="text-xs text-gray-400">{count}문제</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Level Progress */}
+        <div className="bg-white/5 rounded-2xl p-4">
+          <h3 className="text-sm font-bold text-gray-300 mb-3">📈 레벨별 진행도</h3>
+          <div className="space-y-2">
+            {LEVEL_INFO.map(info => {
+              const s = save.stats[info.level];
+              if (!s || s.total === 0) return null;
+              const rate = Math.round((s.correct / s.total) * 100);
+              return (
+                <div key={info.level} className="flex items-center gap-2 text-xs">
+                  <span className="w-6">{info.icon}</span>
+                  <span className="w-20 truncate">Lv{info.level}</span>
+                  <div className="flex-1 bg-white/10 rounded-full h-2 overflow-hidden">
+                    <div className={`h-full rounded-full ${rate >= 90 ? 'bg-green-500' : rate >= 70 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{width:`${rate}%`}}/>
+                  </div>
+                  <span className="text-gray-400 w-10 text-right">{rate}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MISSION COMPLETION HELPER
+// ============================================================
+function checkAndCompleteMissions(save) {
+  const today = getTodayString();
+  const missions = generateDailyMissions(today);
+  const dp = getDailyProgress(save);
+  if (!save.missionsCompleted) save.missionsCompleted = {};
+  if (!save.missionsCompleted[today]) save.missionsCompleted[today] = [];
+
+  for (const m of missions) {
+    if (!save.missionsCompleted[today].includes(m.id) && isMissionComplete(m, save, dp)) {
+      save.missionsCompleted[today].push(m.id);
+      save.totalScore = (save.totalScore || 0) + m.bonus;
+    }
+  }
+}
+
+// ============================================================
+// APP
+// ============================================================
+function App() {
+  const [screen, setScreen] = useState("home");
+  const [save, setSave] = useState(loadSave);
+  const [selectedLevel, setSelectedLevel] = useState(1);
+  const [lastScore, setLastScore] = useState(0);
+  const [lastCorrect, setLastCorrect] = useState(0);
+  const [lastWrong, setLastWrong] = useState(0);
+  const [quizKey, setQuizKey] = useState(0);
+
+  function updateSave(newSave) {
+    setSave(newSave);
+    writeSave(newSave);
+  }
+
+  function go(s) { stopSpeaking(); setScreen(s); }
+
+  const totalCaught = Object.keys(save.monstersCaught || {}).length;
+  const totalScore = save.totalScore || 0;
+  const bestStreak = save.bestStreak || 0;
+
+  return (
+    <div className="h-full w-full max-w-lg mx-auto relative overflow-hidden">
+      <VoiceToggle />
+      {screen === "home" && (
+        <StartScreen
+          onPlay={() => go("levels")}
+          onDex={() => go("dex")}
+          onWrongReview={() => go("wrongReview")}
+          onTimeAttack={() => go("timeAttackLevels")}
+          onParentDash={() => go("parentDash")}
+          totalCaught={totalCaught}
+          totalScore={totalScore}
+          bestStreak={bestStreak}
+          save={save}
+        />
+      )}
+      {screen === "levels" && (
+        <LevelSelect
+          save={save}
+          onSelect={(lv) => { setSelectedLevel(lv); go("story"); }}
+          onBoss={(lv) => { setSelectedLevel(lv); setQuizKey(Date.now()); go("boss"); }}
+          onBack={() => go("home")}
+        />
+      )}
+      {screen === "story" && (
+        <StoryIntro
+          level={selectedLevel}
+          onStart={() => { setQuizKey(Date.now()); go("quiz"); }}
+        />
+      )}
+      {screen === "quiz" && (
+        <QuizScreen
+          key={`quiz-${selectedLevel}-${quizKey}`}
+          level={selectedLevel}
+          save={save}
+          onUpdateSave={updateSave}
+          onBack={() => go("levels")}
+          onComplete={(sc, c, w) => { setLastScore(sc); setLastCorrect(c); setLastWrong(w); go("complete"); }}
+        />
+      )}
+      {screen === "complete" && (
+        <QuizComplete
+          score={lastScore}
+          correctCount={lastCorrect}
+          wrongCount={lastWrong}
+          level={selectedLevel}
+          save={save}
+          onHome={() => go("home")}
+          onRetry={() => { setQuizKey(Date.now()); go("story"); }}
+        />
+      )}
+      {screen === "dex" && (
+        <MonsterDex
+          save={save}
+          onBack={() => go("home")}
+        />
+      )}
+      {screen === "boss" && (
+        <BossBattle
+          key={`boss-${selectedLevel}-${quizKey}`}
+          level={selectedLevel}
+          save={save}
+          onUpdateSave={updateSave}
+          onBack={() => go("levels")}
+          onVictory={() => go("levels")}
+        />
+      )}
+      {screen === "wrongReview" && (
+        <WrongAnswerReview
+          save={save}
+          onUpdateSave={updateSave}
+          onBack={() => go("home")}
+        />
+      )}
+      {screen === "timeAttackLevels" && (
+        <TimeAttackLevelSelect
+          save={save}
+          onSelect={(lv) => { setSelectedLevel(lv); setQuizKey(Date.now()); go("timeAttack"); }}
+          onBack={() => go("home")}
+        />
+      )}
+      {screen === "timeAttack" && (
+        <TimeAttackGame
+          key={`ta-${selectedLevel}-${quizKey}`}
+          level={selectedLevel}
+          save={save}
+          onUpdateSave={updateSave}
+          onBack={() => go("timeAttackLevels")}
+        />
+      )}
+      {screen === "parentDash" && (
+        <ParentDashboard
+          save={save}
+          onBack={() => go("home")}
+        />
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
