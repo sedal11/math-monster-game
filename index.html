@@ -237,8 +237,8 @@ function PokemonSprite({seed, stage, size="text-7xl", className=""}) {
   const pool = POKEMON_POOLS[stage];
   const pokemonId = pool[h % pool.length];
   const url = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`;
-  const sizeMap = {"text-3xl": "48px", "text-4xl": "56px", "text-7xl": "96px", "text-8xl": "128px", "text-9xl": "160px"};
-  const imgSize = sizeMap[size] || "96px";
+  const sizeMap = {"text-3xl": "72px", "text-4xl": "88px", "text-7xl": "140px", "text-8xl": "180px", "text-9xl": "220px"};
+  const imgSize = sizeMap[size] || "140px";
 
   return React.createElement('img', {
     src: url,
@@ -252,8 +252,8 @@ function PokemonSprite({seed, stage, size="text-7xl", className=""}) {
 function BossPokemonSprite({level, size="text-8xl", className=""}) {
   const pokemonId = BOSS_POKEMON_IDS[level % BOSS_POKEMON_IDS.length];
   const url = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonId}.png`;
-  const sizeMap = {"text-3xl": "48px", "text-4xl": "56px", "text-7xl": "96px", "text-8xl": "128px", "text-9xl": "160px"};
-  const imgSize = sizeMap[size] || "128px";
+  const sizeMap = {"text-3xl": "72px", "text-4xl": "88px", "text-7xl": "140px", "text-8xl": "180px", "text-9xl": "220px"};
+  const imgSize = sizeMap[size] || "180px";
 
   return React.createElement('img', {
     src: url,
